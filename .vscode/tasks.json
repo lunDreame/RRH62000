@@ -1,0 +1,152 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "ESP-IDF: Build",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false,
+                "clear": false
+            }
+        },
+        {
+            "label": "ESP-IDF: Clean",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py fullclean",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Flash",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py -p ${config:idf.port} flash",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Build and Flash",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py -p ${config:idf.port} build flash",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Monitor",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py -p ${config:idf.port} -b ${config:idf.monitorBaudRate} monitor",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "isBackground": true
+        },
+        {
+            "label": "ESP-IDF: Build, Flash and Monitor",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "ESP-IDF: Build and Flash",
+                "ESP-IDF: Monitor"
+            ],
+            "problemMatcher": [],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Menuconfig",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py menuconfig",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Full Clean",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py fullclean",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Erase Flash",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py -p ${config:idf.port} erase-flash",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Set Target (ESP32)",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py set-target esp32",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Set Target (ESP32-S2)",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py set-target esp32s2",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Set Target (ESP32-C3)",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py set-target esp32c3",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "ESP-IDF: Set Target (ESP32-S3)",
+            "type": "shell",
+            "command": "${config:idf.espIdfPath}/export.sh && idf.py set-target esp32s3",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

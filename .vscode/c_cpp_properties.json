@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "name": "ESP-IDF",
+            "compilerPath": "${env:HOME}/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "includePath": [
+                "${config:idf.espIdfPath}/components/**",
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/main",
+                "${workspaceFolder}/build/config",
+                "${config:idf.espMatterPath}/components/**",
+                "${config:idf.espMatterPath}/connectedhomeip/connectedhomeip/**",
+                "${config:idf.espMatterPath}/connectedhomeip/connectedhomeip/src/**",
+                "${config:idf.espMatterPath}/connectedhomeip/connectedhomeip/src/app/**",
+                "${workspaceFolder}/build/esp-idf/esp_matter/**"
+            ],
+            "browse": {
+                "path": [
+                    "${config:idf.espIdfPath}/components",
+                    "${workspaceFolder}",
+                    "${config:idf.espMatterPath}/components",
+                    "${config:idf.espMatterPath}/connectedhomeip/connectedhomeip"
+                ],
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "defines": [
+                "ESP_PLATFORM",
+                "CHIP_HAVE_CONFIG_H"
+            ],
+            "compilerArgs": [
+                "-mlongcalls"
+            ],
+            "intelliSenseMode": "gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}
