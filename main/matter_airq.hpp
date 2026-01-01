@@ -7,5 +7,6 @@ namespace matter_airq {
 
 esp_err_t init();
 esp_err_t publish(const rrh62000::Reading& reading);
+esp_err_t factory_reset();
 
 } // namespace matter_airq

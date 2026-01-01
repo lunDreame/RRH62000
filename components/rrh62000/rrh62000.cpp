@@ -80,23 +80,44 @@ esp_err_t Rrh62000::parse_uart_frame(const uint8_t* frame, Reading& reading) {
         return (static_cast<uint16_t>(p[0]) << 8) | p[1];
     };
 
-    reading.temperature_c = read_be16(&frame[2]) * 0.01f;
-    reading.humidity_rh = read_be16u(&frame[4]) * 0.01f;
-    reading.pm1_0_mass = read_be16u(&frame[6]) * 0.1f;
-    reading.pm2_5_mass = read_be16u(&frame[8]) * 0.1f;
-    reading.pm10_mass = read_be16u(&frame[10]) * 0.1f;
-    reading.pm0_5_count = read_be16u(&frame[12]) * 0.1f;
-    reading.pm1_0_count = read_be16u(&frame[14]) * 0.1f;
-    reading.pm2_5_count = read_be16u(&frame[16]) * 0.1f;
-    reading.pm5_0_count = read_be16u(&frame[18]) * 0.1f;
-    reading.pm10_count = read_be16u(&frame[20]) * 0.1f;
-    reading.tvoc = read_be16u(&frame[22]) * 10.0f;
-    reading.eco2 = read_be16u(&frame[24]) * 1.0f;
-    reading.iaq = read_be16u(&frame[26]) * 0.01f;
+    // Parse status word
+    uint16_t status = read_be16u(&frame[2]);
+    // Status bits
+    // Bit 0: High Concentration flag
+    // Bit 1: Dust Accumulation flag
+    // Bit 2: Fan Speed Error flag
+    // Bit 3: Fan Error flag
+    reading.fan_error = (status & (1 << 3)) != 0;
+    reading.fan_speed_error = (status & (1 << 2)) != 0;
 
-    uint16_t status = read_be16u(&frame[28]);
-    reading.fan_error = (status & 0x01) != 0;
-    reading.fan_speed_error = (status & 0x02) != 0;
+    // Number Concentration (/cm³)
+    reading.pm0_3_count = read_be16u(&frame[4]) * 0.1f;   // NC_0.3 (0.3µm)
+    reading.pm0_5_count = read_be16u(&frame[6]) * 0.1f;   // NC_0.5 (0.5µm)
+    reading.pm1_0_count = read_be16u(&frame[8]) * 0.1f;   // NC_1 (1.0µm)
+    reading.pm2_5_count = read_be16u(&frame[10]) * 0.1f;  // NC_2.5 (2.5µm)
+    reading.pm5_0_count = read_be16u(&frame[12]) * 0.1f;  // NC_4 (4.0µm, closest available to 5.0µm)
+
+    // Mass Concentration Set 1 (KCI particle reference) (µg/m³)
+    reading.pm1_0_mass = read_be16u(&frame[14]) * 0.1f;  // PM1_1
+    reading.pm2_5_mass = read_be16u(&frame[16]) * 0.1f;  // PM2.5_1
+    reading.pm10_mass = read_be16u(&frame[18]) * 0.1f;   // PM10_1
+
+    // Mass Concentration Set 2 (cigarette smoke reference) (µg/m³)
+    reading.pm1_0_mass_2 = read_be16u(&frame[20]) * 0.1f;  // PM1_2
+    reading.pm2_5_mass_2 = read_be16u(&frame[22]) * 0.1f;  // PM2.5_2
+    reading.pm10_mass_2 = read_be16u(&frame[24]) * 0.1f;   // PM10_2
+
+    // Environment
+    reading.temperature_c = read_be16(&frame[26]) * 0.01f;  // Temperature (°C)
+    reading.humidity_rh = read_be16u(&frame[28]) * 0.01f;   // Relative Humidity (%RH)
+
+    // Gas / IAQ
+    reading.tvoc = read_be16u(&frame[30]) * 10.0f;  // TVOC (µg/m³)
+    reading.eco2 = read_be16u(&frame[32]) * 1.0f;   // eCO2 (ppm)
+    reading.iaq = read_be16u(&frame[34]) * 0.01f;   // IAQ index
+    reading.relative_iaq = read_be16u(&frame[36]);  // Relative IAQ (Reserved)
+
+    //ESP_LOGI(TAG, "Temperature: %f°C, Humidity: %f%%, PM0.3: %f, PM0.5: %f, PM1.0: %f, PM2.5: %f, PM5.0: %f, PM10: %f, PM1.0 Mass: %f, PM2.5 Mass: %f, PM10 Mass: %f, PM1.0 Mass 2: %f, PM2.5 Mass 2: %f, PM10 Mass 2: %f, TVOC: %f, eCO2: %f, IAQ: %f, Relative IAQ: %d", reading.temperature_c, reading.humidity_rh, reading.pm0_3_count, reading.pm0_5_count, reading.pm1_0_count, reading.pm2_5_count, reading.pm5_0_count, 0.0f, reading.pm1_0_mass, reading.pm2_5_mass, reading.pm10_mass, reading.pm1_0_mass_2, reading.pm2_5_mass_2, reading.pm10_mass_2, reading.tvoc, reading.eco2, reading.iaq, reading.relative_iaq);
 
     return ESP_OK;
 }

@@ -7,9 +7,17 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
+#include "iot_button.h"
+#include "button_gpio.h"
 
 namespace {
 constexpr const char* TAG = "app_tasks";
+button_handle_t button_handle = nullptr;
+
+void button_long_press_cb(void* button_handle, void* usr_data) {
+    ESP_LOGI(TAG, "Button long press detected - triggering factory reset");
+    matter_airq::factory_reset();
+}
 }
 
 static void sensor_task(void* pvParameters) {
@@ -35,9 +43,8 @@ static void sensor_task(void* pvParameters) {
     while (true) {
         ret = sensor.read_passive(reading, 1000);
         if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "T=%.2f°C, RH=%.2f%%, PM2.5=%.1f, PM10=%.1f, CO2=%.0f, TVOC=%.1f, IAQ=%.2f",
-                     reading.temperature_c, reading.humidity_rh, reading.pm2_5_mass, reading.pm10_mass,
-                     reading.eco2, reading.tvoc, reading.iaq);
+            ESP_LOGI(TAG, "Temperature: %f°C, Humidity: %f%%, PM1.0: %f, PM2.5: %f, PM10: %f, CO2: %f, TVOC: %f, IAQ: %f",
+                     reading.temperature_c, reading.humidity_rh, reading.pm1_0_mass, reading.pm2_5_mass, reading.pm10_mass, reading.eco2, reading.tvoc, reading.iaq);
 
             ret = matter_airq::publish(reading);
             if (ret != ESP_OK) {
@@ -57,5 +64,39 @@ esp_err_t sensor_task_start() {
         ESP_LOGE(TAG, "Failed to create sensor task");
         return ESP_FAIL;
     }
+    return ESP_OK;
+}
+
+esp_err_t button_init() {
+    button_config_t button_cfg = {
+        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
+        .short_press_time = 0
+    };
+
+    button_gpio_config_t gpio_cfg = {
+        .gpio_num = app_config::BUTTON_GPIO,
+        .active_level = 0,  // Active low (BOOT button is typically active low)
+        .enable_power_save = false,
+        .disable_pull = false
+    };
+
+    esp_err_t ret = iot_button_new_gpio_device(&button_cfg, &gpio_cfg, &button_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create button: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    button_event_args_t long_press_args = {};
+    long_press_args.long_press.press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS;
+    ret = iot_button_register_cb(button_handle, BUTTON_LONG_PRESS_START, &long_press_args, button_long_press_cb, nullptr);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register button callback: %s", esp_err_to_name(ret));
+        iot_button_delete(button_handle);
+        button_handle = nullptr;
+        return ret;
+    }
+
+    ESP_LOGI(TAG, "Button initialized on GPIO %d (long press %d ms for factory reset)", 
+             app_config::BUTTON_GPIO, CONFIG_BUTTON_LONG_PRESS_TIME_MS);
     return ESP_OK;
 }

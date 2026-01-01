@@ -24,5 +24,11 @@ extern "C" void app_main(void) {
         return;
     }
 
+    ret = button_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE("app_main", "Failed to initialize button: %s", esp_err_to_name(ret));
+        return;
+    }
+
     ESP_LOGI("app_main", "Application started");
 }

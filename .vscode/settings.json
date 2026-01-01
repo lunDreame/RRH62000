@@ -50,5 +50,13 @@
     },
     "terminal.integrated.env.windows": {
         "PATH": "${env:PATH}"
+    },
+    "files.associations": {
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "span": "cpp",
+        "vector": "cpp",
+        "iterator": "cpp"
     }
 }

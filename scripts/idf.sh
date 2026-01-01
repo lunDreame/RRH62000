@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ESP-IDF Build Script
+# ESP-IDF Environment Script
 
 set -e
 
@@ -13,7 +13,3 @@ export PATH="/opt/homebrew/bin:$PATH"
 . "$ESP_MATTER_PATH/export.sh"
 
 cd "$(dirname "$0")/.."
-
-#idf.py set-target esp32
-
-idf.py build

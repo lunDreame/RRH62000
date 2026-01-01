@@ -5,13 +5,12 @@
 set -e
 
 export IDF_PATH="$HOME/tools/esp-idf"
+export ESP_MATTER_PATH="$HOME/tools/esp-matter"
 
 export PATH="/opt/homebrew/bin:$PATH"
 
 . "$IDF_PATH/export.sh"
 
-PORT="${1:-/dev/cu.usbserial-0001}"
+cd "$(dirname "$0")/.."
 
-idf.py -p "$PORT" flash
-
-idf.py -p "$PORT" monitor
+idf.py flash monitor
