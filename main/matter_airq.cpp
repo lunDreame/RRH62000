@@ -121,7 +121,10 @@ esp_err_t update_co2(int16_t endpoint_id, float value) {
 esp_err_t update_tvoc(int16_t endpoint_id, float value) {
     if (std::isnan(cached.tvoc) || std::abs(value - cached.tvoc) >= EPSILON_VOC) {
         cached.tvoc = value;
-        esp_matter_attr_val_t val = esp_matter_nullable_float(value);
+        constexpr float MOLECULAR_WEIGHT = 46.07f;  // g/mol
+        constexpr float STP_VOLUME = 24.45f;        // L/mol
+        float ppb_value = (value * STP_VOLUME) / MOLECULAR_WEIGHT;
+        esp_matter_attr_val_t val = esp_matter_nullable_float(ppb_value);
         return esp_matter::attribute::update(endpoint_id, chip::app::Clusters::TotalVolatileOrganicCompoundsConcentrationMeasurement::Id,
                                               chip::app::Clusters::TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasuredValue::Id,
                                               &val);
@@ -184,84 +187,84 @@ esp_err_t init() {
         return ESP_FAIL;
     }
 
-    // Note: PM0.3, PM0.5, PM5.0 are not standard Matter clusters, so we only add PM1.0
     esp_matter::cluster::pm1_concentration_measurement::config_t pm1_config;
     esp_matter::cluster_t *pm1_cluster = esp_matter::cluster::pm1_concentration_measurement::create(endpoint, &pm1_config, esp_matter::CLUSTER_FLAG_SERVER);
     if (pm1_cluster == nullptr) {
-        ESP_LOGW(TAG, "PM1.0 cluster not supported, skipping...");
-    } else {
-        // Set FeatureMap for PM1.0 cluster
-        esp_matter::attribute_t *pm1_feature_map_attr = esp_matter::attribute::get(pm1_cluster, chip::app::Clusters::Globals::Attributes::FeatureMap::Id);
-        if (pm1_feature_map_attr) {
-            esp_matter_attr_val_t pm1_feature_map_val;
-            esp_err_t ret = esp_matter::attribute::get_val(pm1_feature_map_attr, &pm1_feature_map_val);
-            if (ret == ESP_OK) {
-                pm1_feature_map_val.val.u32 |= 0x1; // MEA: Cluster supports numeric measurement of substance
-                ret = esp_matter::attribute::set_val(pm1_feature_map_attr, &pm1_feature_map_val);
-                if (ret != ESP_OK) {
-                    ESP_LOGW(TAG, "Failed to set FeatureMap for PM1.0 cluster: %s", esp_err_to_name(ret));
-                } else {
-                    ESP_LOGI(TAG, "FeatureMap set for PM1.0 cluster (MEA bit enabled)");
-                }
+        ESP_LOGE(TAG, "Failed to create Pm1ConcentrationMeasurement cluster");
+        return ESP_FAIL;
+    }
+
+    // Set FeatureMap for PM1.0 cluster
+    esp_matter::attribute_t *pm1_feature_map_attr = esp_matter::attribute::get(pm1_cluster, chip::app::Clusters::Globals::Attributes::FeatureMap::Id);
+    if (pm1_feature_map_attr) {
+        esp_matter_attr_val_t pm1_feature_map_val;
+        esp_err_t ret = esp_matter::attribute::get_val(pm1_feature_map_attr, &pm1_feature_map_val);
+        if (ret == ESP_OK) {
+            pm1_feature_map_val.val.u32 |= 0x1; // MEA: Cluster supports numeric measurement of substance
+            ret = esp_matter::attribute::set_val(pm1_feature_map_attr, &pm1_feature_map_val);
+            if (ret != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to set FeatureMap for PM1.0 cluster: %s", esp_err_to_name(ret));
+            } else {
+                ESP_LOGI(TAG, "FeatureMap set for PM1.0 cluster (MEA bit enabled)");
             }
         }
+    }
 
-        // Create PM1.0 cluster attributes manually
-        esp_matter::attribute_t *pm1_attr;
-        uint32_t pm1_attr_id;
-        uint8_t pm1_flags;
+    // Create PM1.0 cluster attributes manually
+    esp_matter::attribute_t *pm1_attr;
+    uint32_t pm1_attr_id;
+    uint8_t pm1_flags;
 
-        // Create MeasuredValue attribute
-        pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MeasuredValue::Id;
-        pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    // Create MeasuredValue attribute
+    pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MeasuredValue::Id;
+    pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    if (!pm1_attr) {
+        pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NULLABLE;
+        pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_nullable_float(nullable<float>()));
         if (!pm1_attr) {
-            pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NULLABLE;
-            pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_nullable_float(nullable<float>()));
-            if (!pm1_attr) {
-                ESP_LOGE(TAG, "Failed to create PM1.0 MeasuredValue attribute");
-                return ESP_FAIL;
-            }
-            ESP_LOGI(TAG, "PM1.0 MeasuredValue attribute created");
+            ESP_LOGE(TAG, "Failed to create PM1.0 MeasuredValue attribute");
+            return ESP_FAIL;
         }
+        ESP_LOGI(TAG, "PM1.0 MeasuredValue attribute created");
+    }
 
-        // Create MinMeasuredValue attribute
-        pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MinMeasuredValue::Id;
-        pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    // Create MinMeasuredValue attribute
+    pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MinMeasuredValue::Id;
+    pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    if (!pm1_attr) {
+        pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NULLABLE;
+        pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_nullable_float(nullable<float>()));
         if (!pm1_attr) {
-            pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NULLABLE;
-            pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_nullable_float(nullable<float>()));
-            if (!pm1_attr) {
-                ESP_LOGE(TAG, "Failed to create PM1.0 MinMeasuredValue attribute");
-                return ESP_FAIL;
-            }
-            ESP_LOGI(TAG, "PM1.0 MinMeasuredValue attribute created");
+            ESP_LOGE(TAG, "Failed to create PM1.0 MinMeasuredValue attribute");
+            return ESP_FAIL;
         }
+        ESP_LOGI(TAG, "PM1.0 MinMeasuredValue attribute created");
+    }
 
-        // Create MaxMeasuredValue attribute
-        pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MaxMeasuredValue::Id;
-        pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    // Create MaxMeasuredValue attribute
+    pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MaxMeasuredValue::Id;
+    pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    if (!pm1_attr) {
+        pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NULLABLE;
+        pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_nullable_float(nullable<float>()));
         if (!pm1_attr) {
-            pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NULLABLE;
-            pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_nullable_float(nullable<float>()));
-            if (!pm1_attr) {
-                ESP_LOGE(TAG, "Failed to create PM1.0 MaxMeasuredValue attribute");
-                return ESP_FAIL;
-            }
-            ESP_LOGI(TAG, "PM1.0 MaxMeasuredValue attribute created");
+            ESP_LOGE(TAG, "Failed to create PM1.0 MaxMeasuredValue attribute");
+            return ESP_FAIL;
         }
+        ESP_LOGI(TAG, "PM1.0 MaxMeasuredValue attribute created");
+    }
 
-        // Create MeasurementUnit attribute
-        pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MeasurementUnit::Id;
-        pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    // Create MeasurementUnit attribute
+    pm1_attr_id = chip::app::Clusters::Pm1ConcentrationMeasurement::Attributes::MeasurementUnit::Id;
+    pm1_attr = esp_matter::attribute::get(pm1_cluster, pm1_attr_id);
+    if (!pm1_attr) {
+        pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NONE;
+        pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_enum8(4)); // µg/m³ (kUgm3)
         if (!pm1_attr) {
-            pm1_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NONE;
-            pm1_attr = esp_matter::attribute::create(pm1_cluster, pm1_attr_id, pm1_flags, esp_matter_enum8(4)); // µg/m³ (kUgm3)
-            if (!pm1_attr) {
-                ESP_LOGE(TAG, "Failed to create PM1.0 MeasurementUnit attribute");
-                return ESP_FAIL;
-            }
-            ESP_LOGI(TAG, "PM1.0 MeasurementUnit attribute created (µg/m³)");
+            ESP_LOGE(TAG, "Failed to create PM1.0 MeasurementUnit attribute");
+            return ESP_FAIL;
         }
+        ESP_LOGI(TAG, "PM1.0 MeasurementUnit attribute created (µg/m³)");
     }
 
     esp_matter::cluster::pm25_concentration_measurement::config_t pm25_config;
@@ -495,12 +498,12 @@ esp_err_t init() {
     attr = esp_matter::attribute::get(co2_cluster, attr_id);
     if (!attr) {
         flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NONE;
-        attr = esp_matter::attribute::create(co2_cluster, attr_id, flags, esp_matter_enum8(0)); // PPM
+        attr = esp_matter::attribute::create(co2_cluster, attr_id, flags, esp_matter_enum8(0)); // PPM (kPpm)
         if (!attr) {
             ESP_LOGE(TAG, "Failed to create CO2 MeasurementUnit attribute");
             return ESP_FAIL;
         }
-        ESP_LOGI(TAG, "CO2 MeasurementUnit attribute created");
+        ESP_LOGI(TAG, "CO2 MeasurementUnit attribute created (PPM)");
     }
 
     esp_matter::cluster::total_volatile_organic_compounds_concentration_measurement::config_t tvoc_config;
@@ -510,6 +513,7 @@ esp_err_t init() {
         return ESP_FAIL;
     }
 
+    // Set FeatureMap for TVOC cluster
     esp_matter::attribute_t *tvoc_feature_map_attr = esp_matter::attribute::get(tvoc_cluster, chip::app::Clusters::Globals::Attributes::FeatureMap::Id);
     if (tvoc_feature_map_attr) {
         esp_matter_attr_val_t tvoc_feature_map_val;
@@ -570,16 +574,18 @@ esp_err_t init() {
     }
 
     // Create MeasurementUnit attribute
+    // Note: TVOC Measurement Cluster only supports PPB and PPM, not µg/m³
+    // Conversion: ppb = (µg/m³ x 24.45) / Molecular Weight
     tvoc_attr_id = chip::app::Clusters::TotalVolatileOrganicCompoundsConcentrationMeasurement::Attributes::MeasurementUnit::Id;
     tvoc_attr = esp_matter::attribute::get(tvoc_cluster, tvoc_attr_id);
     if (!tvoc_attr) {
         tvoc_flags = esp_matter::attribute_flags::ATTRIBUTE_FLAG_NONE;
-        tvoc_attr = esp_matter::attribute::create(tvoc_cluster, tvoc_attr_id, tvoc_flags, esp_matter_enum8(4)); // µg/m³ (kUgm3)
+        tvoc_attr = esp_matter::attribute::create(tvoc_cluster, tvoc_attr_id, tvoc_flags, esp_matter_enum8(1)); // PPB (kPpb)
         if (!tvoc_attr) {
             ESP_LOGE(TAG, "Failed to create TVOC MeasurementUnit attribute");
             return ESP_FAIL;
         }
-        ESP_LOGI(TAG, "TVOC MeasurementUnit attribute created (µg/m³)");
+        ESP_LOGI(TAG, "TVOC MeasurementUnit attribute created (PPB)");
     }
 
     esp_matter::cluster::air_quality::config_t airq_config;

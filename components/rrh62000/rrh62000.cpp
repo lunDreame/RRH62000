@@ -117,8 +117,6 @@ esp_err_t Rrh62000::parse_uart_frame(const uint8_t* frame, Reading& reading) {
     reading.iaq = read_be16u(&frame[34]) * 0.01f;   // IAQ index
     reading.relative_iaq = read_be16u(&frame[36]);  // Relative IAQ (Reserved)
 
-    //ESP_LOGI(TAG, "Temperature: %f°C, Humidity: %f%%, PM0.3: %f, PM0.5: %f, PM1.0: %f, PM2.5: %f, PM5.0: %f, PM10: %f, PM1.0 Mass: %f, PM2.5 Mass: %f, PM10 Mass: %f, PM1.0 Mass 2: %f, PM2.5 Mass 2: %f, PM10 Mass 2: %f, TVOC: %f, eCO2: %f, IAQ: %f, Relative IAQ: %d", reading.temperature_c, reading.humidity_rh, reading.pm0_3_count, reading.pm0_5_count, reading.pm1_0_count, reading.pm2_5_count, reading.pm5_0_count, 0.0f, reading.pm1_0_mass, reading.pm2_5_mass, reading.pm10_mass, reading.pm1_0_mass_2, reading.pm2_5_mass_2, reading.pm10_mass_2, reading.tvoc, reading.eco2, reading.iaq, reading.relative_iaq);
-
     return ESP_OK;
 }
 
